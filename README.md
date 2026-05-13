@@ -212,4 +212,4 @@ This project covers the **full modern data engineering stack**:
  
 ## 📬 Connect
 
-Built by **[Shambhu Prasad Sah]** — [LinkedIn](https://www.linkedin.com/in/sahshambhu/) · [GitHub](https://github.com/itsmeshambhus)
+Built by **Shambhu Prasad Sah** — [LinkedIn](https://www.linkedin.com/in/sahshambhu/) · [GitHub](https://github.com/itsmeshambhus)
