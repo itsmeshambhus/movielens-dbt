@@ -80,6 +80,8 @@ FILE_FORMAT = (TYPE = 'CSV' SKIP_HEADER = 1 FIELD_OPTIONALLY_ENCLOSED_BY = '"');
  
 ```
 movielens/
+├── setup/
+│   └── snowflake_setup.sql 
 ├── models/
 │   ├── staging/         → Source-aligned staging models (src_*)
 │   ├── dim/             → Dimension tables (dim_*)
