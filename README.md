@@ -166,10 +166,10 @@ dbt docs generate && dbt docs serve  # View documentation
 
 ## 📚 What I Learned
 
-This project was built as part of my **Data Engineering learning journey** following the [DataVidhya](https://publish.obsidian.md/datavidhya) DBT course. It covers the full DBT feature set in a real-world analytics engineering context.
+This project was built as part of my **Data Engineering learning journey** to practice real-world analytics engineering using the full DBT feature set.
 
 ---
 
 ## 📬 Connect
 
-Built by **[Your Name]** — [LinkedIn](https://linkedin.com/in/yourprofile) · [GitHub](https://github.com/yourusername)
+Built by **[Shambhu Prasad Sah]** — [LinkedIn](https://www.linkedin.com/in/sahshambhu/) · [GitHub](https://github.com/itsmeshambhus)
