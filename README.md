@@ -1,163 +1,155 @@
-# 🎬 MovieLens ELT Pipeline
-
+# 🎬 MovieLens ELT Pipeline (AWS + Snowflake + dbt)
  
-An end-to-end data engineering project built on the [MovieLens 20M dataset](https://grouplens.org/datasets/movielens/20m/) — covering the full ELT pipeline from raw CSV files on Amazon S3 to analytics-ready tables in Snowflake, transformed using **DBT (Data Build Tool)**.
+An end-to-end data engineering project that builds a scalable ELT pipeline using the MovieLens 20M dataset, transforming raw user interaction data into analytics-ready models using AWS S3, Snowflake, and dbt.
  
+---
+ 
+## 🎯 Project Objective
+ 
+To design and implement a modern cloud data pipeline that transforms raw movie ratings, tags, and metadata into structured analytical models for:
+ 
+- Movie popularity analysis
+- User rating behavior insights
+- Tag relevance and evolution tracking
+- Analytics-ready reporting datasets
 ---
  
 ## 🏗️ Architecture
  
 ```
-MovieLens CSVs (6 files)
+MovieLens Dataset (CSV files)
         ↓
-Amazon S3 Bucket (raw storage)
+Amazon S3 (Raw Storage)
         ↓
-AWS IAM User (secure Snowflake access)
+Snowflake External Stage (S3 Integration)
         ↓
-Snowflake External Stage (S3 → Snowflake)
+COPY INTO → Raw Tables
         ↓
-COPY INTO → Raw Tables (6 tables)
+dbt Staging Layer (Cleaning & Standardization)
         ↓
-DBT Staging Models (clean & rename)
+dbt Dimension & Fact Models (Business Logic)
         ↓
-DBT Dim + Fact Models (business logic)
-        ↓
-DBT Mart Models (analytics-ready tables)
+dbt Mart Layer (Analytics-ready tables)
 ```
  
 ---
  
 ## 🛠️ Tech Stack
  
-| Layer | Tool | Purpose |
+| Layer | Technology | Purpose |
 |---|---|---|
-| Storage | Amazon S3 | Store raw MovieLens CSV files |
-| Security | AWS IAM | Dedicated user with S3 read policy for Snowflake |
-| Warehouse | Snowflake | Cloud data warehouse — external stage + raw tables |
-| Transform | DBT Core | Modular SQL transformation pipeline |
-| Packages | dbt_utils | Surrogate key generation and utilities |
-| Language | SQL + Jinja | Model and macro authoring |
+| Storage | Amazon S3 | Raw dataset storage |
+| Security | AWS IAM | Secure Snowflake access |
+| Warehouse | Snowflake | Scalable cloud data warehouse |
+| Transform | dbt Core | SQL-based transformation framework |
+| Utilities | dbt_utils | Macros & surrogate keys |
+| Language | SQL + Jinja | Data modeling logic |
  
 ---
  
 ## ☁️ Infrastructure Setup
  
-### Step 1 — Amazon S3
-- Created an S3 bucket and uploaded all 6 MovieLens CSV files:
-  - `movies.csv`, `ratings.csv`, `tags.csv`
-  - `genome-scores.csv`, `genome-tags.csv`, `links.csv`
-### Step 2 — AWS IAM User
-- Created a dedicated IAM user for Snowflake access
-- Attached an S3 read policy — following the principle of least privilege
-- Generated AWS access key and secret for use in Snowflake stage
-### Step 3 — Snowflake External Stage
-```sql
-CREATE STAGE movielens_stage
-  URL='s3://your-bucket-name'
-  CREDENTIALS=(
-    AWS_KEY_ID='<your_aws_key_id>'
-    AWS_SECRET_KEY='<your_aws_secret_key>'
-  );
-```
+All Snowflake setup SQL (user creation, IAM integration, external stage, raw table loading) is available in [`setup/snowflake_setup.sql`](setup/snowflake_setup.sql).
  
-### Step 4 — Load Raw Tables with COPY INTO
-```sql
-CREATE OR REPLACE TABLE raw_movies (
-  movieId INTEGER,
-  title STRING,
-  genres STRING
-);
- 
-COPY INTO raw_movies
-FROM '@movielens_stage/movies.csv'
-FILE_FORMAT = (TYPE = 'CSV' SKIP_HEADER = 1 FIELD_OPTIONALLY_ENCLOSED_BY = '"');
-```
-> See full setup SQL in [`setup/snowflake_setup.sql`](setup/snowflake_setup.sql)
- 
+This covers:
+- Snowflake role, warehouse, and user creation
+- AWS IAM user with least-privilege S3 access
+- External stage connecting Snowflake to S3
+- COPY INTO commands for all 6 raw tables
 ---
  
-## 📁 DBT Project Structure
+## 📁 dbt Project Structure
  
 ```
 movielens/
-├── setup/
-│   └── snowflake_setup.sql 
 ├── models/
-│   ├── staging/         → Source-aligned staging models (src_*)
-│   ├── dim/             → Dimension tables (dim_*)
-│   ├── fct/             → Fact tables (fct_*)
-│   └── mart/            → Final mart tables for reporting
-├── snapshots/           → SCD Type 2 tracking (snap_tags)
-├── seeds/               → Static CSV reference data
-├── macros/              → Reusable Jinja SQL macros
-├── tests/               → Custom data quality tests
-├── analyses/            → Ad-hoc SQL exploration queries
-├── packages.yml         → dbt_utils package dependency
-└── dbt_project.yml      → Project configuration
+│   ├── staging/   → Raw data cleaning (src_ models)
+│   ├── dim/       → Dimension tables
+│   ├── fct/       → Fact tables (events & metrics)
+│   └── mart/      → Final reporting layer
+├── snapshots/     → SCD Type 2 historical tracking
+├── seeds/         → Static reference CSV data
+├── macros/        → Reusable Jinja SQL logic
+├── tests/         → Custom data quality tests
+├── analyses/      → Ad-hoc exploration queries
+├── setup/         → Snowflake infrastructure setup SQL
+├── packages.yml   → dbt_utils dependency
+└── dbt_project.yml → Project configuration
 ```
  
 ---
  
-## 🧩 DBT Models Overview
+## 🧩 Data Models
  
-### Staging Layer
+### 🔹 Staging Layer
+Cleaned and standardized raw data:
+ 
 | Model | Description |
 |---|---|
 | `src_movies` | Raw movies with renamed columns |
-| `src_ratings` | Raw user ratings with timestamp conversion |
-| `src_tags` | Raw user tags with timestamp conversion |
+| `src_ratings` | Raw ratings with timestamp conversion |
+| `src_tags` | Raw tags with timestamp conversion |
 | `src_links` | Movie external links (IMDB, TMDB) |
 | `src_genome_tags` | Genome tag labels |
-| `src_genome_score` | Genome relevance scores per movie/tag |
+| `src_genome_scores` | Genome relevance scores |
  
-### Dimension Layer
+### 🔹 Dimension Layer
+Business entities:
+ 
 | Model | Description |
 |---|---|
-| `dim_movies` | Cleaned movie metadata with genre array |
-| `dim_users` | Unique users derived from ratings + tags |
-| `dim_genome_tags` | Standardized genome tag names |
-| `dim_movies_with_tags` | Ephemeral model joining movies, tags & scores |
+| `dim_movies` | Movie metadata with genres array |
+| `dim_users` | Unique users extracted from activity |
+| `dim_genome_tags` | Standardized tag definitions |
  
-### Fact Layer
+### 🔹 Fact Layer
+Event-based analytical tables:
+ 
 | Model | Description |
 |---|---|
-| `fct_ratings` | Incremental fact table of user ratings |
-| `fct_genome_scores` | Relevance scores per movie and tag |
+| `fct_ratings` | User movie ratings (incremental model) |
+| `fct_genome_scores` | Tag relevance scores per movie |
  
-### Mart Layer
+### 🔹 Mart Layer
+Final analytics datasets:
+ 
 | Model | Description |
 |---|---|
-| `mart_movie_releases` | Ratings joined with seed release dates |
+| `mart_movie_releases` | Ratings enriched with release metadata |
  
 ---
  
-## ⚡ Key DBT Features Used
+## ⚡ Key dbt Features Implemented
  
-- **Incremental model** — `fct_ratings` loads only new records using `is_incremental()`
-- **Ephemeral model** — `dim_movies_with_tags` used as a reusable CTE, not materialized
-- **Snapshot** — `snap_tags` tracks historical tag changes (SCD Type 2) using timestamp strategy + `dbt_utils.generate_surrogate_key`
-- **Seeds** — `seed_movie_release_dates.csv` for static reference data
-- **Custom Macro** — `no_nulls_in_columns` iterates all columns using Jinja loop
-- **Custom Test** — `relevence_score_test.sql` using the macro on `fct_genome_scores`
-- **Schema Tests** — `not_null` and `relationships` tests defined in `schema.yml`
-- **Packages** — `dbt_utils` for surrogate key generation
-- **Analysis** — `movie_analysis.sql` for top-rated movies exploration
+- 🔄 **Incremental Model** → Efficient loading of new ratings only
+- 📸 **Snapshots (SCD Type 2)** → Track historical tag changes
+- 🧩 **Ephemeral Models** → Optimized transformations without storage cost
+- 🧪 **Data Testing** → Not null, relationships, and custom tests
+- 🧠 **Macros (Jinja)** → Reusable SQL logic for data validation
+- 📦 **dbt Packages** → Surrogate key generation using dbt_utils
 ---
  
-## 🧪 Testing
+## 📊 Analytical Outputs
  
-```bash
-dbt test                          # Run all tests
-dbt test --select fct_ratings     # Run specific model test
-```
+This pipeline enables:
  
-Tests include:
-- `not_null` on all primary and foreign keys
-- `relationships` between `fct_ratings.movie_id` → `dim_movies.movie_id`
-- Custom null check macro on `fct_genome_scores`
+- Top-rated movies based on user ratings
+- Most active users in the platform
+- Genre-wise rating distribution
+- Tag relevance across movies (genome data)
+- Historical tag evolution tracking (SCD2 snapshots)
 ---
  
-## 🚀 Getting Started
+## ⚠️ Key Engineering Highlights
+ 
+- Designed multi-layer ELT architecture (staging → mart)
+- Implemented incremental processing for 20M+ ratings dataset
+- Built slowly changing dimension tracking using dbt snapshots
+- Applied data modeling best practices (Kimball approach)
+- Ensured data quality through automated dbt tests
+---
+ 
+## 🚀 How to Run
  
 ### Prerequisites
 - Python 3.8+
@@ -168,14 +160,14 @@ Tests include:
  
 ```bash
 # Clone the repo
-git clone https://github.com/itsmeshambhus/movielens-dbt.git
-cd movielens-dbt
+git clone https://github.com/itsmeshambhus/movielens-elt-pipeline.git
+cd movielens-elt-pipeline
+ 
+# Run Snowflake infrastructure setup
+# See setup/snowflake_setup.sql
  
 # Install dbt packages
 dbt deps
- 
-# Configure your Snowflake connection
-# Create ~/.dbt/profiles.yml with your credentials
  
 # Run the full pipeline
 dbt build
@@ -194,22 +186,23 @@ dbt docs generate && dbt docs serve  # View documentation
  
 ---
  
-## 📊 Dataset
+## 📚 Dataset
  
-**MovieLens 20M** — a well-known dataset from GroupLens Research containing:
-- ~27,000 movies
-- ~20 million ratings from ~138,000 users
-- Genome tags and relevance scores
-- User-generated tags with timestamps
+**MovieLens 20M** — a well-known dataset from GroupLens Research:
+ 
+- 20M+ ratings
+- 27,000+ movies
+- 138,000+ users
+- Genome tag relevance scores
 ---
  
-## 📚 What I Learned
+## 🧠 What I Learned
  
-This project covers the **full modern data engineering stack**:
-- Setting up cloud storage on **AWS S3**
-- Managing secure access with **AWS IAM**
-- Loading data into **Snowflake** using external stages and COPY INTO
-- Building a complete **DBT transformation pipeline** with modular models, testing, documentation, snapshots, macros, and incremental loading
+- Building cloud ELT pipelines using AWS + Snowflake
+- Designing modular data models with dbt
+- Implementing incremental and snapshot strategies
+- Writing reusable SQL using Jinja macros
+- Applying production-style data engineering practices
 ---
  
 ## 📬 Connect
