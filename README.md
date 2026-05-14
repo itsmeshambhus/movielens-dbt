@@ -15,7 +15,7 @@ To design and implement a modern cloud data pipeline that transforms raw movie r
 ---
  
 ## 🏗️ Architecture
- 
+ ![MovieLens ELT Pipeline Architecture](assets/architecture.png)
 ```
 MovieLens Dataset (CSV files)
         ↓
@@ -81,6 +81,9 @@ movielens/
  
 ## 🧩 Data Models
  
+## 📊 DBT Lineage Graph
+![DBT Lineage Graph](assets/lineage.png)
+
 ### 🔹 Staging Layer
 Cleaned and standardized raw data:
  
